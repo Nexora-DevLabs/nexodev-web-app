@@ -1,3 +1,240 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  /* Updated to Nexora DevLabs brand colors */
+  --background: #0a0f1c; /* Dark navy background */
+  --foreground: #ffffff; /* White text */
+  --card: #1e3a5f; /* Navy blue cards */
+  --card-foreground: #ffffff; /* White text on cards */
+  --popover: #1e3a5f; /* Navy popover */
+  --popover-foreground: #ffffff; /* White text in popovers */
+  --primary: #4fd1c7; /* Teal primary color */
+  --primary-foreground: #0a0f1c; /* Dark text on teal */
+  --secondary: #1e3a5f; /* Navy secondary */
+  --secondary-foreground: #ffffff; /* White text on secondary */
+  --muted: #2a4a6b; /* Muted navy */
+  --muted-foreground: #94a3b8; /* Light gray muted text */
+  --accent: #4fd1c7; /* Teal accent */
+  --accent-foreground: #0a0f1c; /* Dark text on accent */
+  --destructive: #ef4444; /* Red for destructive */
+  --destructive-foreground: #ffffff; /* White text on destructive */
+  --border: #334155; /* Gray borders */
+  --input: #1e3a5f; /* Navy inputs */
+  --ring: #4fd1c7; /* Teal focus rings */
+  --chart-1: #4fd1c7;
+  --chart-2: #1e3a5f;
+  --chart-3: #94a3b8;
+  --chart-4: #0ea5e9;
+  --chart-5: #8b5cf6;
+  --radius: 0.75rem;
+  --sidebar: #0a0f1c;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #4fd1c7;
+  --sidebar-primary-foreground: #0a0f1c;
+  --sidebar-accent: #1e3a5f;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #334155;
+  --sidebar-ring: #4fd1c7;
+  /* Updated font variables for Nexora branding */
+  --font-inter: "Inter", sans-serif;
+  --font-poppins: "Poppins", sans-serif;
+}
+
+.dark {
+  --background: #0a0f1c;
+  --foreground: #ffffff;
+  --card: #1e3a5f;
+  --card-foreground: #ffffff;
+  --popover: #1e3a5f;
+  --popover-foreground: #ffffff;
+  --primary: #4fd1c7;
+  --primary-foreground: #0a0f1c;
+  --secondary: #1e3a5f;
+  --secondary-foreground: #ffffff;
+  --muted: #2a4a6b;
+  --muted-foreground: #94a3b8;
+  --accent: #4fd1c7;
+  --accent-foreground: #0a0f1c;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #334155;
+  --input: #1e3a5f;
+  --ring: #4fd1c7;
+  --chart-1: #4fd1c7;
+  --chart-2: #1e3a5f;
+  --chart-3: #94a3b8;
+  --chart-4: #0ea5e9;
+  --chart-5: #8b5cf6;
+  --sidebar: #0a0f1c;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #4fd1c7;
+  --sidebar-primary-foreground: #0a0f1c;
+  --sidebar-accent: #1e3a5f;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #334155;
+  --sidebar-ring: #4fd1c7;
+  --font-inter: "Inter", sans-serif;
+  --font-poppins: "Poppins", sans-serif;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-inter);
+  }
+}
+
+/* Added heading font class */
+.font-heading {
+  font-family: var(--font-poppins);
+}
+
+/* Dynamic Island animations */
+@keyframes dynamic-island-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.dynamic-island-pulse {
+  animation: dynamic-island-pulse 2s ease-in-out infinite;
+}
+
+/* Action button animations */
+@keyframes button-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 5px currentColor;
+  }
+  50% {
+    box-shadow: 0 0 20px currentColor, 0 0 30px currentColor;
+  }
+}
+
+.action-button-glow {
+  animation: button-glow 2s ease-in-out infinite;
+}
+
+/* Compact state animation */
+@keyframes compact-dots {
+  0%,
+  80%,
+  100% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.compact-dots > div:nth-child(1) {
+  animation-delay: 0s;
+}
+.compact-dots > div:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.compact-dots > div:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+/* Winking face animations */
+@keyframes winking-face {
+  0%,
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+  25% {
+    transform: scale(1.05) rotate(1deg);
+  }
+  50% {
+    transform: scale(1.1) rotate(-1deg);
+  }
+  75% {
+    transform: scale(1.05) rotate(0.5deg);
+  }
+}
+
+@keyframes winking-eye {
+  0%,
+  85%,
+  100% {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+  }
+  15%,
+  70% {
+    width: 0.5rem;
+    height: 0.125rem;
+    border-radius: 0.25rem;
+  }
+}
+
+@keyframes breathing-glow {
+  0%,
+  100% {
+    opacity: 0.1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.2;
+    transform: scale(1.1);
+  }
+}
+
+@keyframes smile-mouth {
+  0%,
+  100% {
+    border-radius: 0.5rem;
+    transform: scaleY(1);
+  }
+  50% {
+    border-radius: 1rem;
+    transform: scaleY(0.8);
+  }
+}
+
+.winking-face {
+  animation: winking-face 3s ease-in-out infinite;
+}
+
+.winking-eye {
+  animation: winking-eye 3.5s ease-in-out infinite;
+}
+
+.smile-mouth {
+  animation: smile-mouth 4s ease-in-out infinite;
+}
+
+.breathing-glow {
+  animation: breathing-glow 4s ease-in-out infinite;
+}
+
+/* Focus ring animations */
+.focus-ring {
+  transition: all 0.2s ease-in-out;
+}
+
+.focus-ring:focus-within {
+  box-shadow: 0 0 0 3px rgba(79, 209, 199, 0.3);
+}
+
+/* Line clamp utilities */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

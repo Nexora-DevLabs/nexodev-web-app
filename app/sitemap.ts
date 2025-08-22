@@ -1,10 +1,14 @@
 import { MetadataRoute } from "next";
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+export default function sitemap(): MetadataRoute.Sitemap {
+  const baseUrl = "https://nexora-devlabs.com";
+  
   return [
     {
-      url: "https://precedent.dev",
+      url: baseUrl,
       lastModified: new Date(),
-    }
+      changeFrequency: "monthly",
+      priority: 1,
+    },
   ];
 }

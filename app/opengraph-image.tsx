@@ -1,60 +1,105 @@
 /* eslint-disable @next/next/no-img-element */
-import { ImageResponse } from "next/og";
+import { ImageResponse } from "@vercel/og";
 
 export const runtime = "edge";
-export const alt = "Precedent - Building blocks for your Next.js project";
+
+export const alt = "Nexora DevLabs - Building smart. Shipping fast.";
 export const contentType = "image/png";
+export const size = {
+  width: 1200,
+  height: 630,
+};
 
-export default async function OG() {
-  const sfPro = await fetch(
-    new URL("./fonts/SF-Pro-Display-Medium.otf", import.meta.url),
-  ).then((res) => res.arrayBuffer());
-
+export default async function Image() {
   return new ImageResponse(
     (
       <div
         style={{
-          height: "100%",
+          background: "linear-gradient(135deg, #0F2A3F 0%, #1EB5BF 100%)",
           width: "100%",
+          height: "100%",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: "white",
-          backgroundImage:
-            "linear-gradient(to bottom right, #E0E7FF 25%, #ffffff 50%, #CFFAFE 75%)",
+          padding: "40px",
         }}
       >
-        <img
-          src={`https://${process.env.VERCEL_URL || "precedent.dev"}/logo.png`}
-          alt="Precedent Logo"
-          tw="w-20 h-20 mb-4 opacity-95"
-        />
-        <h1
+        {/* Logo */}
+        <div
           style={{
-            fontSize: "100px",
-            fontFamily: "SF Pro",
-            background:
-              "linear-gradient(to bottom right, #000000 21.66%, #78716c 86.47%)",
-            backgroundClip: "text",
-            color: "transparent",
-            lineHeight: "5rem",
-            letterSpacing: "-0.02em",
+            display: "flex",
+            alignItems: "center",
+            marginBottom: "40px",
           }}
         >
-          Precedent
+          <div
+            style={{
+              width: "80px",
+              height: "80px",
+              borderRadius: "20px",
+              background: "#1EB5BF",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              marginRight: "20px",
+            }}
+          >
+            <span
+              style={{
+                color: "white",
+                fontSize: "40px",
+                fontWeight: "bold",
+              }}
+            >
+              N
+            </span>
+          </div>
+          <span
+            style={{
+              fontSize: "48px",
+              fontWeight: "bold",
+              color: "white",
+            }}
+          >
+            Nexora DevLabs
+          </span>
+        </div>
+
+        {/* Main text */}
+        <h1
+          style={{
+            fontSize: "72px",
+            fontWeight: "bold",
+            color: "white",
+            textAlign: "center",
+            margin: "0 0 20px 0",
+            lineHeight: 1.1,
+          }}
+        >
+          Build smart.
+          <br />
+          Ship fast.
         </h1>
+
+        {/* Subtitle */}
+        <p
+          style={{
+            fontSize: "28px",
+            color: "rgba(255, 255, 255, 0.9)",
+            textAlign: "center",
+            margin: "0",
+            maxWidth: "800px",
+            lineHeight: 1.4,
+          }}
+        >
+          We craft lean, modern software for teams who value clarity, velocity,
+          and reliability.
+        </p>
       </div>
     ),
     {
-      width: 1200,
-      height: 630,
-      fonts: [
-        {
-          name: "SF Pro",
-          data: sfPro,
-        },
-      ],
+      ...size,
     },
   );
 }

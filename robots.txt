@@ -1,4 +1,10 @@
-Sitemap: https://precedent.dev/sitemap.xml
-
 User-agent: *
-Disallow: /api
+Allow: /
+
+# Sitemap
+Sitemap: https://nexora-devlabs.com/sitemap.xml
+
+# Disallow admin or private areas (when they exist)
+Disallow: /api/
+Disallow: /_next/
+Disallow: /admin/

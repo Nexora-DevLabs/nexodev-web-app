@@ -3,6 +3,7 @@ const plugin = require("tailwindcss/plugin");
 
 module.exports = {
   content: ["./app/**/*.{js,ts,jsx,tsx}", "./components/**/*.{js,ts,jsx,tsx}"],
+  darkMode: "class",
   future: {
     hoverOnlyWhenSupported: true,
   },
@@ -11,6 +12,35 @@ module.exports = {
       fontFamily: {
         display: ["var(--font-sf)", "system-ui", "sans-serif"],
         default: ["var(--font-inter)", "system-ui", "sans-serif"],
+      },
+      colors: {
+        brand: {
+          primary: "var(--brand-primary)",
+          secondary: "var(--brand-secondary)",
+          bg: "var(--brand-bg)",
+          surface: "var(--brand-surface)",
+          foreground: "var(--brand-foreground)",
+          muted: "var(--brand-muted)",
+          border: "var(--brand-border)",
+        },
+      },
+      ringColor: {
+        DEFAULT: "var(--brand-secondary)",
+      },
+      borderColor: {
+        DEFAULT: "var(--brand-border)",
+      },
+      backgroundColor: {
+        skin: {
+          base: "var(--brand-bg)",
+          surface: "var(--brand-surface)",
+          muted: "var(--brand-muted)",
+        },
+      },
+      textColor: {
+        skin: {
+          base: "var(--brand-foreground)",
+        },
       },
       animation: {
         // Fade up and down
