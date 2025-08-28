@@ -4,11 +4,18 @@ export default function HomeHeroContent() {
   return (
     <main className="absolute inset-0 z-20 flex items-center justify-center">
       <div className="max-w-4xl px-6 text-center">
-        <div className="relative mb-8 inline-flex items-center rounded-full border border-white/20 bg-white/10 px-4 py-2 backdrop-blur-sm">
-          <span className="text-primary text-sm font-medium">
-            ✨ Nexora DevLabs
-          </span>
+        <a href="https://status.nexodev.io" target="_blank" rel="noopener noreferrer">
+        <div className="relative mb-8 inline-flex items-center justify-center rounded-full border border-white/20 bg-white/10 px-4 py-2 backdrop-blur-sm">
+          <iframe 
+            src="https://status.nexodev.io/badge?theme=dark" 
+            width="190" 
+            height="30" 
+            style={{ colorScheme: 'normal', pointerEvents: 'none' }}
+            title="Nexora DevLabs Service Status"
+            className="rounded-full"
+          />
         </div>
+        </a>
 
         <h1 className="font-heading mb-6 text-5xl font-bold leading-tight text-white md:text-7xl">
           <span className="text-primary">Simplify.</span> Build.{" "}
