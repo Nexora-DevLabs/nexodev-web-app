@@ -1,0 +1,238 @@
+name: Issue dependency assignment (Nexoroid)
+
+on:
+  issues:
+    types: [closed, reopened, edited]
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  DEFAULT_ASSIGNEE: "smcnab1"
+  COMMENT_MARK: "<!-- nexoroid:deps -->"
+
+jobs:
+  issue-deps:
+    if: ${{ github.event.issue.pull_request == null }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Create Nexoroid installation token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.NEXOROID_APP_ID }}
+          private-key: ${{ secrets.NEXOROID_APP_PRIVATE_KEY }}
+
+      - name: Install tools (gh, jq)
+        run: |
+          set -euo pipefail
+          if ! command -v gh >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y curl
+            curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+            sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list >/dev/null
+            sudo apt-get update
+            sudo apt-get install -y gh
+          fi
+          sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Export GH_TOKEN (App) & verify access
+        env:
+          TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          set -euo pipefail
+          # Make the App installation token the only token used
+          echo "GH_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+
+          # Verify the token can access this repo by fetching the issue itself
+          owner="${GITHUB_REPOSITORY%/*}"
+          repo="${GITHUB_REPOSITORY#*/}"
+          num="${{ github.event.issue.number }}"
+          if ! GH_TOKEN="$TOKEN" gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/$owner/$repo/issues/$num" >/dev/null 2>&1; then
+            echo "The Nexoroid App token cannot access $owner/$repo. Ensure the App is installed on this repo/org with 'Issues: Read & write'." >&2
+            exit 1
+          fi
+
+          # Resolve bot login (for cleanup)
+          if GH_TOKEN="$TOKEN" gh api -H 'X-GitHub-Api-Version: 2022-11-28' /user >/tmp/user.json 2>/dev/null; then
+            BOT_LOGIN="$(jq -r .login /tmp/user.json)"
+          else
+            # Best-effort fallback to app-slug[bot] if /user isn’t available for this token
+            # (change the slug if your bot’s login differs)
+            BOT_LOGIN="nexoroid[bot]"
+          fi
+          echo "BOT_LOGIN=$BOT_LOGIN" >> "$GITHUB_ENV"
+
+      - name: Prep cleanup helper
+        env:
+          COMMENT_MARK: ${{ env.COMMENT_MARK }}
+        run: |
+          set -euo pipefail
+          cat >/tmp/cleanup_comments.sh <<'BASH_EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          issue_num="$1"
+          owner="${GITHUB_REPOSITORY%/*}"
+          repo="${GITHUB_REPOSITORY#*/}"
+          gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/$owner/$repo/issues/$issue_num/comments?per_page=100" \
+          | jq -c '.[]' | while read -r c; do
+              author=$(jq -r '.user.login' <<<"$c")
+              id=$(jq -r '.id' <<<"$c")
+              body=$(jq -r '.body' <<<"$c")
+              if [[ "$author" == "$BOT_LOGIN" && "$body" == *"$COMMENT_MARK"* ]]; then
+                echo "Deleting previous Nexoroid comment $id on #$issue_num"
+                gh api -X DELETE -H 'X-GitHub-Api-Version: 2022-11-28' \
+                  "/repos/$owner/$repo/issues/comments/$id" || true
+              fi
+            done
+          BASH_EOF
+          chmod +x /tmp/cleanup_comments.sh
+
+      # ── A) Closed → assign dependants & remove 'blocked' ───────────────────────
+      - name: "Closed → assign dependants & remove 'blocked'"
+        if: ${{ github.event.action == 'closed' }}
+        env:
+          GH_TOKEN: ${{ env.GH_TOKEN }}
+          DEFAULT_ASSIGNEE: ${{ env.DEFAULT_ASSIGNEE }}
+          COMMENT_MARK: ${{ env.COMMENT_MARK }}
+        run: |
+          set -euo pipefail
+          owner="${GITHUB_REPOSITORY%/*}"
+          repo="${GITHUB_REPOSITORY#*/}"
+          src="${{ github.event.issue.number }}"
+
+          gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/$owner/$repo/issues/$src/dependencies/blocking" \
+            | jq -c '.[]' > /tmp/dependants.json || true
+
+          CLOSED_COUNT="$(wc -l < /tmp/dependants.json || true)"
+          echo "CLOSED_COUNT=$CLOSED_COUNT" >> "$GITHUB_ENV"
+
+          while IFS= read -r row; do
+            [ -n "${row:-}" ] || continue
+            num="$(jq -r '.number' <<< "$row")"
+            state="$(jq -r '.state'  <<< "$row")"
+            [ "$state" = "open" ] || { echo "#$num not open; skip"; continue; }
+
+            issue_json="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/$owner/$repo/issues/$num")"
+            assignee_count="$(jq '.assignees | length' <<< "$issue_json")"
+            author="$(jq -r '.user.login' <<< "$issue_json")"
+
+            if [ "$assignee_count" -gt 0 ]; then
+              echo "#$num already has assignees; skipping"
+            else
+              target="${DEFAULT_ASSIGNEE:-$author}"
+              echo "Assigning @$target to #$num"
+              gh api -X POST -H 'X-GitHub-Api-Version: 2022-11-28' \
+                "/repos/$owner/$repo/issues/$num/assignees" -f "assignees[]=$target"
+
+              /tmp/cleanup_comments.sh "$num"
+              gh api -X POST -H 'X-GitHub-Api-Version: 2022-11-28' \
+                "/repos/$owner/$repo/issues/$num/comments" \
+                -f body="${COMMENT_MARK}
+                Unblocked by #$src (now closed). Assigned to @$target. ✅"
+            fi
+
+            gh api -X DELETE -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "/repos/$owner/$repo/issues/$num/labels/blocked" || true
+          done < /tmp/dependants.json
+
+      # ── B) Reopened → unassign dependants & add 'blocked' ──────────────────────
+      - name: "Reopened → unassign dependants & add 'blocked'"
+        if: ${{ github.event.action == 'reopened' }}
+        env:
+          GH_TOKEN: ${{ env.GH_TOKEN }}
+          COMMENT_MARK: ${{ env.COMMENT_MARK }}
+        run: |
+          set -euo pipefail
+          owner="${GITHUB_REPOSITORY%/*}"
+          repo="${GITHUB_REPOSITORY#*/}"
+          src="${{ github.event.issue.number }}"
+
+          gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/$owner/$repo/issues/$src/dependencies/blocking" \
+            | jq -c '.[]' > /tmp/reblocked.json || true
+
+          REOPENED_COUNT="$(wc -l < /tmp/reblocked.json || true)"
+          echo "REOPENED_COUNT=$REOPENED_COUNT" >> "$GITHUB_ENV"
+
+          while IFS= read -r row; do
+            [ -n "${row:-}" ] || continue
+            num="$(jq -r '.number' <<< "$row")"
+            state="$(jq -r '.state'  <<< "$row")"
+            [ "$state" = "open" ] || { echo "#$num not open; skip"; continue; }
+
+            issue_json="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/$owner/$repo/issues/$num")"
+
+            jq -r '.assignees[]?.login // empty' <<< "$issue_json" | while read -r u; do
+              [ -n "${u:-}" ] || continue
+              echo "Unassigning @$u from #$num"
+              gh api -X DELETE -H 'X-GitHub-Api-Version: 2022-11-28' \
+                "/repos/$owner/$repo/issues/$num/assignees" -f "assignees[]=$u" || true
+            done
+
+            gh api -X POST -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "/repos/$owner/$repo/issues/$num/labels" -f "labels[]=blocked" || true
+
+            /tmp/cleanup_comments.sh "$num"
+            gh api -X POST -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "/repos/$owner/$repo/issues/$num/comments" \
+              -f body="${COMMENT_MARK}
+              Re-blocked by #$src (reopened). All assignees removed and label applied. ⛔"
+          done < /tmp/reblocked.json
+
+      # ── C) Edited → if now blocked, unassign itself & add 'blocked' ────────────
+      - name: "Edited → enforce blocked state on this issue"
+        if: ${{ github.event.action == 'edited' }}
+        env:
+          GH_TOKEN: ${{ env.GH_TOKEN }}
+          COMMENT_MARK: ${{ env.COMMENT_MARK }}
+        run: |
+          set -euo pipefail
+          owner="${GITHUB_REPOSITORY%/*}"
+          repo="${GITHUB_REPOSITORY#*/}"
+          num="${{ github.event.issue.number }}"
+
+          gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/$owner/$repo/issues/$num/dependencies/blocked_by" \
+            | jq -c '[.[] | select(.state=="open")]' > /tmp/open_blockers.json || echo "[]" > /tmp/open_blockers.json
+
+          EDITED_OPEN_BLOCKERS="$(jq 'length' /tmp/open_blockers.json || echo 0)"
+          echo "EDITED_OPEN_BLOCKERS=$EDITED_OPEN_BLOCKERS" >> "$GITHUB_ENV"
+
+          if [ "$EDITED_OPEN_BLOCKERS" -gt 0 ]; then
+            issue_json="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/$owner/$repo/issues/$num")"
+
+            jq -r '.assignees[]?.login // empty' <<< "$issue_json" | while read -r u; do
+              [ -n "${u:-}" ] || continue
+              echo "Unassigning @$u from #$num"
+              gh api -X DELETE -H 'X-GitHub-Api-Version: 2022-11-28' \
+                "/repos/$owner/$repo/issues/$num/assignees" -f "assignees[]=$u" || true
+            done
+
+            gh api -X POST -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "/repos/$owner/$repo/issues/$num/labels" -f "labels[]=blocked" || true
+
+            /tmp/cleanup_comments.sh "$num"
+            gh api -X POST -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "/repos/$owner/$repo/issues/$num/comments" \
+              -f body="${COMMENT_MARK}
+              This issue is currently **blocked** by at least one open dependency. Assignees removed and label applied. ⛔"
+          else
+            echo "No open blockers after edit; nothing to enforce."
+          fi
+
+      - name: Job summary
+        run: |
+          {
+            echo "### Issue dependency assignment (Nexoroid)"
+            echo "- Acting as: ${BOT_LOGIN}"
+            echo "- Action: ${{ github.event.action }}"
+            echo "- Closed dependants processed: ${CLOSED_COUNT:-0}"
+            echo "- Reopened dependants processed: ${REOPENED_COUNT:-0}"
+            echo "- Edited open blockers: ${EDITED_OPEN_BLOCKERS:-0}"
+          } >> "$GITHUB_STEP_SUMMARY"
